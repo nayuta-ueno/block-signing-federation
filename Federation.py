@@ -39,7 +39,7 @@ def main():
 
     # INIT ELEMENTS FEDERATION NODES
     elements_nodes = []
-    tmpdir="/tmp/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
+    tmpdir="/tmp/elements/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
     for i in range(0, num_of_nodes):
         datadir = tmpdir + "/node" + str(i)
         os.makedirs(datadir)
