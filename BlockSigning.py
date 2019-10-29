@@ -10,14 +10,16 @@ TOPIC_NEW_BLOCK = 'new-block'
 TOPIC_NEW_SIG = 'new-sig'
 
 class Producer(DaemonThread):
-    def __init__(self, height, block):
+    def __init__(self, id, height, block):
         super().__init__()
+        self.id = id
         self.new_height = height + 1
         self.block = block
         self.producer = KafkaProducer(bootstrap_servers=KAFKA_SERVER)
 
     def run(self):
         # send new block proposal
+        print('send block {} height={} block={}'.format(self.id, self.new_height, self.block))
         self.producer.send(TOPIC_NEW_BLOCK,
                     key=str.encode('{}'.format(self.new_height)),
                     value=str.encode(self.block))
@@ -31,6 +33,7 @@ class Consumer(DaemonThread):
     def __init__(self, id, height, elements):
         super().__init__()
         self.sig_topic = TOPIC_NEW_SIG + "{}".format(id)
+        self.id = id
         self.height = height
         self.elements = elements
         self.consumer = KafkaConsumer(bootstrap_servers=KAFKA_SERVER,
@@ -43,11 +46,14 @@ class Consumer(DaemonThread):
         # wait for new block proposal and sign block when received
         while not self.stop_event.is_set():
             for message in self.consumer:
+                print('message {} = {}'.format(self.id, message))
                 new_height = int(message.key.decode())
                 if new_height > self.height: # just in case to avoid old messages
                     new_block = message.value.decode()
+                    print('receive {} new_block={}'.format(self.id, new_block))
                     try:
                         sign = self.elements.signblock(new_block)
+                        print('signblock==>', sign)
                         reply = {'key': new_height, 'sig': sign}
                         producer = KafkaProducer(bootstrap_servers=KAFKA_SERVER,
                                                  value_serializer=lambda v: json.dumps(v).encode('utf-8'))
@@ -66,6 +72,8 @@ class BlockSigning(DaemonProcess):
         self.total = num_of_nodes
         self.id = id
         self.sig_topics = [TOPIC_NEW_SIG + "{}".format(i) for i in range(0,self.total)]
+        hash = self.elements.getblockhash(0)
+        print('genesis=', hash)
 
     def run(self):
         while not self.stop_event.is_set():
@@ -86,10 +94,9 @@ class BlockSigning(DaemonProcess):
                 sleep(self.interval / 2 - (time() - start_time))
             else:
                 # FIRST PROPAGATE THE BLOCK
-                print("blockcount:{}".format(height))
                 print("node {} - producer".format(self.id))
                 block = self.elements.getnewblockhex()
-                p = Producer(height, block)
+                p = Producer(self.id, height, block)
                 p.start()
                 sleep(self.interval / 3)
                 p.stop()
@@ -111,9 +118,11 @@ class BlockSigning(DaemonProcess):
                 except Exception as ex:
                     print("serialization failed {}".format(ex))
 
+                print('received combineblocksigs {} sigs={}'.format(self.id, sigs))
                 blockresult = self.elements.combineblocksigs(block, sigs)
                 signedblock = blockresult["hex"]
                 try:
+                    print('submitblock{}'.format(self.id))
                     self.elements.submitblock(signedblock)
                     print("node {} - submitted block {}".format(self.id, signedblock))
                 except JSONRPCException as error:
