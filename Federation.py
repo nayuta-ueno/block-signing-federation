@@ -14,19 +14,19 @@ ELEMENTS_PATH = "../../../src/elementsd"
 GENERATE_KEYS = False
 BLOCK_TIME = 60
 
-def main():
+def main(generate_keys):
     # GENERATE KEYS AND SINGBLOCK SCRIPT FOR FEDERATION BLOCK SIGNING
     num_of_nodes = 3
     num_of_sigs = 2
     keys = []
     signblockarg = ""
 
-    if GENERATE_KEYS:  # generate new signing keys and multisig
+    if generate_keys:  # generate new signing keys and multisig
         if num_of_sigs > num_of_nodes:
                 raise ValueError("Num of sigs cannot be larger than num of nodes")
         sig = MultiSig(num_of_nodes, num_of_sigs)
         keys = sig.wifs
-        signblockarg = "-signblockscript={}".format(sig.script)
+        signblockarg = "-signblockscript={} -con_max_block_sig_size=150 -con_dyna_deploy_start=0".format(sig.script)
         with open('federation_data.json', 'w') as data_file:
             data = {"keys" : keys, "signblockarg" : signblockarg}
             json.dump(data, data_file)
@@ -39,7 +39,7 @@ def main():
 
     # INIT ELEMENTS FEDERATION NODES
     elements_nodes = []
-    tmpdir="/tmp/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
+    tmpdir="/tmp/elements/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
     for i in range(0, num_of_nodes):
         datadir = tmpdir + "/node" + str(i)
         os.makedirs(datadir)
@@ -76,4 +76,7 @@ def main():
         shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
-    main()
+    generate_keys = False
+    if (len(sys.argv) == 2) and sys.argv[1] == 'generate':
+        generate_keys = True
+    main(generate_keys)
