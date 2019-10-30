@@ -53,8 +53,8 @@ class Consumer(DaemonThread):
                     print('receive {} new_block={}'.format(self.id, new_block))
                     try:
                         sign = self.elements.signblock(new_block)
-                        print('signblock==>', sign)
-                        reply = {'key': new_height, 'sig': sign}
+                        print('reply signblock==>', sign[0])
+                        reply = {'key': new_height, 'sig': sign[0]}
                         producer = KafkaProducer(bootstrap_servers=KAFKA_SERVER,
                                                  value_serializer=lambda v: json.dumps(v).encode('utf-8'))
                         producer.send(self.sig_topic, reply)
@@ -110,7 +110,7 @@ class BlockSigning(DaemonProcess):
                 master_consumer.subscribe(self.sig_topics)
 
                 sigs = []
-                sigs.append(self.elements.signblock(block))
+                sigs.append(self.elements.signblock(block)[0])
                 try:
                     for message in master_consumer:
                         if message.topic in self.sig_topics and int(message.value.get("key", ""))>height:
