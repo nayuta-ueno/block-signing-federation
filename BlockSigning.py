@@ -66,6 +66,8 @@ class BlockSigning(DaemonProcess):
         self.total = num_of_nodes
         self.id = id
         self.sig_topics = [TOPIC_NEW_SIG + "{}".format(i) for i in range(0,self.total)]
+        hash = self.elements.getblockhash(0)
+        print('genesis=', hash)
 
     def run(self):
         while not self.stop_event.is_set():

@@ -11,7 +11,6 @@ from BlockSigning import BlockSigning
 from test_framework.authproxy import AuthServiceProxy, JSONRPCException
 
 ELEMENTS_PATH = "../../../src/elementsd"
-GENERATE_KEYS = False
 BLOCK_TIME = 60
 
 def main(generate_keys):
@@ -39,10 +38,14 @@ def main(generate_keys):
 
     # INIT ELEMENTS FEDERATION NODES
     elements_nodes = []
-    tmpdir="/tmp/elements/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
+    # tmpdir="/tmp/elements/"+''.join(random.choice('0123456789ABCDEF') for i in range(5))
+    tmpdir="/tmp/elements"
     for i in range(0, num_of_nodes):
         datadir = tmpdir + "/node" + str(i)
-        os.makedirs(datadir)
+        try:
+            os.makedirs(datadir)
+        except:
+            pass
 
         confdir="node"+str(i)+"/elements.conf"
         shutil.copyfile(confdir, datadir+"/elements.conf")
@@ -73,7 +76,7 @@ def main(generate_keys):
         for elements in elements_nodes:
             elements.stop()
 
-        shutil.rmtree(tmpdir)
+        #shutil.rmtree(tmpdir)
 
 if __name__ == "__main__":
     generate_keys = False
